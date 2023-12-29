@@ -19,12 +19,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "rtc.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "utils.h"
+#include "lcd12864serial.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,6 +60,7 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t alarm_trigered = 0;
+
 /* USER CODE END 0 */
 
 /**
@@ -92,22 +96,44 @@ int main(void)
   MX_USART3_UART_Init();
   MX_UART4_Init();
   MX_RTC_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-
-  RTC_TimeTypeDef sTime = {0};
-  HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
-  RTC_TimeTypeDef alarm_time = {.Hours = 0,.Minutes = 1,.Seconds = 0};
-  RTC_AlarmTypeDef alarm = {.AlarmTime = alarm_time,.Alarm = RTC_ALARM_A };
-  HAL_RTC_SetAlarm(&hrtc,&alarm,RTC_FORMAT_BCD);
-  //HAL_RTC_GetAlarm();
+	HAL_TIM_Base_Start(&htim1);
+	
+	Lcd_Init();
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	RTC_TimeTypeDef sTime = {0};
   while (1)
   {
-    HAL_Delay(500);
-    HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_8);
+		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+		show_time(0,0,&sTime);
+		HAL_Delay(100);
+//		sprintf(current_time,"%02d:%02d:%02d",sTime.Hours,sTime.Minutes,sTime.Seconds);
+//		LCD_Display_Words(0,0,(uint8_t *)current_time);
+    //i--;
+		
+//    if (i <= 0)
+//    {
+//			i = 10;
+//			LCD_Display_Words(0,0,(uint8_t *)"entering standby");
+//			//HAL_RTC_PollForAlarmAEvent();
+//			
+//			RTC_TimeTypeDef sTime = {0};
+//			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+//			show_time(0,0,&sTime);
+//			RTC_TimeTypeDef after = time_after(&sTime,10);
+//			show_time(0,16,&after);
+//			RTC_AlarmTypeDef alarm = {.AlarmTime = after,.Alarm = RTC_ALARM_A};
+//			HAL_Delay(2000);
+//			//HAL_RTC_SetAlarm_IT(&hrtc,&alarm,RTC_FORMAT_BIN);
+//			//HAL_RTCEx_DeactivateSecond(&hrtc);
+//			
+//      //HAL_PWR_EnterSTANDBYMode();
+//    }
     //HAL_IWDG_Refresh(&hiwdg);
     //HAL_PWR_EnterSTANDBYMode();
     /* USER CODE END WHILE */
@@ -164,27 +190,6 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM1 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.
