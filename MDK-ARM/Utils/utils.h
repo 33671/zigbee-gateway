@@ -8,3 +8,4 @@ void delay_us(uint16_t us);
 void delay_ms(uint32_t ms);
 void led_signal();
 extern int utils_num;
+uint32_t RTC_ReadTimeCounter(RTC_HandleTypeDef *hrtc);

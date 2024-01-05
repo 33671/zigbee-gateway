@@ -1,6 +1,20 @@
 #include "lcd12864serial.h"
 #include "gpio.h"
 #include <stdio.h>
+#include "stm32f1xx_hal_rtc.h"
+void btox(uint8_t *xp,uint8_t *bb, int n)
+{
+  const char xx[]= "0123456789ABCDEF";
+  while (--n >= 0) xp[n] = xx[(bb[n>>1] >> ((1 - (n&1)) << 2)) & 0xF];
+}
+
+void print_hex(uint8_t *rxBuffer)
+{
+  uint8_t hexstr[17];
+  btox(hexstr, rxBuffer, 8 * 2);
+  hexstr[16] = 0;
+  LCD_Display_Words(1,0,hexstr);
+}
 /* 字符显示RAM地址    4行8列 */
 u8 LCD_addr[4][8]= {
   {0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87},  		//第一行
@@ -20,7 +34,18 @@ void show_time(uint8_t x,uint8_t y,RTC_TimeTypeDef* sTime)
   sprintf(current_time,"%02d:%02d:%02d",sTime->Hours,sTime->Minutes,sTime->Seconds);
   LCD_Display_Words(x,y,(uint8_t *)current_time);
 }
-
+/*!
+*  @brief      LCD显示日期
+ *  @since      v1.0
+ *  @param  sTime   时间
+ *  @author
+ */
+void show_date(uint8_t x,uint8_t y,RTC_DateTypeDef* sDate)
+{
+  char current_time[] = "2023-59-59";
+  sprintf(current_time,"20%02d/%02d/%02d",sDate->Year,RTC_Bcd2ToByte(sDate->Month),sDate->Date);
+  LCD_Display_Words(x,y,(uint8_t *)current_time);
+}
 /*!
 *  @brief      LCD串行发送一个字节
  *  @since      v1.0
@@ -40,14 +65,8 @@ void SendByte(u8 byte)
     {
       HAL_GPIO_WritePin(SID,0);         // 引脚输出低电平，代表发送0
     }
-    /*或
-    	SID =	(Dbyte << i) & 0x80;
-
-    	上面那样为了方便理解
-    */
     HAL_GPIO_WritePin(SCLK,0);   //时钟线置低  允许SID变化
-    delay_us(5); //延时使数据写入
-		//delay_ms(1); //延时使数据写入
+    delay_us(10); //延时使数据写入
     HAL_GPIO_WritePin(SCLK,1);    //拉高时钟，让从机读SID
   }
 }
@@ -88,14 +107,14 @@ void Lcd_WriteData(u8 Dat )
  */
 void Lcd_Init(void)
 {
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,1);
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,1);	
-	led_signal();
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,0);	
+  HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,1);
+  HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,1);
+  led_signal();
+  HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,0);
   delay_ms(50);   	//等待液晶自检（延时>40ms）
-	//led_signal();
+  //led_signal();
   Lcd_WriteCmd(0x30);        //功能设定:选择基本指令集
-	
+
   delay_ms(1);//延时>100us
   Lcd_WriteCmd(0x30);        //功能设定:选择8bit数据流
   delay_ms(1);	//延时>37us

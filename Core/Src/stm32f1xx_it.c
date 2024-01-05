@@ -22,11 +22,13 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "lcd12864serial.h"
+#include "utils.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
-
+extern uint8_t buffer[256];
 /* USER CODE END TD */
 
 /* Private define ------------------------------------------------------------*/
@@ -55,7 +57,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern RTC_HandleTypeDef hrtc;
+extern DMA_HandleTypeDef hdma_usart2_rx;
+extern UART_HandleTypeDef huart5;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -199,17 +203,45 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles RTC alarm interrupt through EXTI line 17.
+  * @brief This function handles DMA1 channel6 global interrupt.
   */
-void RTC_Alarm_IRQHandler(void)
+void DMA1_Channel6_IRQHandler(void)
 {
-  /* USER CODE BEGIN RTC_Alarm_IRQn 0 */
-	alarm_trigered = 1;
-  /* USER CODE END RTC_Alarm_IRQn 0 */
-  HAL_RTC_AlarmIRQHandler(&hrtc);
-  /* USER CODE BEGIN RTC_Alarm_IRQn 1 */
+  /* USER CODE BEGIN DMA1_Channel6_IRQn 0 */
 
-  /* USER CODE END RTC_Alarm_IRQn 1 */
+  /* USER CODE END DMA1_Channel6_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart2_rx);
+  /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel6_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART5 global interrupt.
+  */
+void UART5_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART5_IRQn 0 */
+
+  /* USER CODE END UART5_IRQn 0 */
+  HAL_UART_IRQHandler(&huart5);
+  /* USER CODE BEGIN UART5_IRQn 1 */
+
+  /* USER CODE END UART5_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
