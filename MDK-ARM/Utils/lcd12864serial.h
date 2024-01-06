@@ -11,19 +11,31 @@
 //接口(SID: PE1  SCLK: PE0) 
 #define SID GPIOC,GPIO_PIN_9
 #define SCLK GPIOB,GPIO_PIN_1
+
 void print_hex(uint8_t *rxBuffer);
-void show_time(uint8_t x,uint8_t y,RTC_TimeTypeDef* sTime);
-void show_date(uint8_t x,uint8_t y,RTC_DateTypeDef* sDate);
-void lcd_GPIO_init(void);
+//void show_time(uint8_t x,uint8_t y,RTC_TimeTypeDef* sTime);
+//void show_date(uint8_t x,uint8_t y,RTC_DateTypeDef* sDate);
+//void lcd_GPIO_init(void);
 void Lcd_Init(void);
 
 void SendByte(u8 Dbyte);
-void LCD_Clear(void);
+//void LCD_Clear(void);
 void LCD_Display_Words(uint8_t x,uint8_t y,uint8_t*str);
-void LCD_Display_Picture(uint8_t *img);
+//void LCD_Display_Picture(uint8_t *img);
 
 void Lcd_WriteData(u8 Dat );
 void Lcd_WriteCmd(u8 Cmd );
+void SendByte1(unsigned char Dbyte);
+void write_cmd(unsigned char Cbyte);
+void write_data(unsigned char Dbyte);
+void LcmInit();
+void PUTchar8x8(unsigned char row,unsigned char col,unsigned char count,unsigned char const *put);
+void PUTchar8x16(unsigned char row,unsigned char col,unsigned char count,unsigned char const *put);
+void PUTchar16x16(unsigned char row,unsigned char col,unsigned char count,unsigned char const *put);
+void PUTchar24x24(unsigned char row,unsigned char col,unsigned char count,unsigned char const *put);
+void PUTBMP(unsigned char const *put);
+void PUTREVERSEBMP(unsigned char const *put);
+void LcmClear();
 static uint8_t RTC_Bcd2ToByte(uint8_t Value)
 {
   uint32_t tmp = 0U;

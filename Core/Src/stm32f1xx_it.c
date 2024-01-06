@@ -24,11 +24,15 @@
 /* USER CODE BEGIN Includes */
 #include "lcd12864serial.h"
 #include "utils.h"
+#include "drf1605h.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
-extern uint8_t buffer[256];
+extern bool should_read_buffer;
+u32 tim2_count = 0;
+u32 uart5_receive_count = 0;
+
 /* USER CODE END TD */
 
 /* Private define ------------------------------------------------------------*/
@@ -57,9 +61,12 @@ extern uint8_t buffer[256];
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern TIM_HandleTypeDef htim2;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern UART_HandleTypeDef huart5;
 extern UART_HandleTypeDef huart2;
+extern TIM_HandleTypeDef htim3;
+
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -189,7 +196,7 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
   /* USER CODE END SysTick_IRQn 0 */
-  HAL_IncTick();
+
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */
@@ -214,6 +221,41 @@ void DMA1_Channel6_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
 
   /* USER CODE END DMA1_Channel6_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+	should_read_buffer = true;
+	tim2_count++;
+	if (tim2_count >= 0xFFFFFFFF)
+	{
+		tim2_count = 0;
+	}
+	
+	//return;
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+	//HAL_TIM_Base_Start_IT(&htim2);
+  /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM3 global interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM3_IRQn 0 */
+
+  /* USER CODE END TIM3_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim3);
+  /* USER CODE BEGIN TIM3_IRQn 1 */
+
+  /* USER CODE END TIM3_IRQn 1 */
 }
 
 /**

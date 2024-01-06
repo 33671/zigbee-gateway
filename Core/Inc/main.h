@@ -36,7 +36,9 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+#define bool uint8_t
+#define true 1
+#define false 0
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -57,8 +59,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define CS_Pin GPIO_PIN_4
-#define CS_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 extern uint8_t alarm_trigered;

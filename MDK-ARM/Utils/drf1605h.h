@@ -1,7 +1,5 @@
 #include "usart.h"
-#define bool uint8_t
-#define true 1
-#define false 0
+
 bool is_router_network_joined();
 bool set_as_coordinator();
 bool set_as_router();
