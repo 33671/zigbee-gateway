@@ -33,6 +33,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "drf1605h.h"
+#include "sender.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,8 +65,8 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define TOTAL_DEVICE 9
-ZigbeeDevice devices[TOTAL_DEVICE];
+
+
 u8 currentdevice_index = 0;
 /* USER CODE END 0 */
 
@@ -108,7 +109,7 @@ int main(void)
   u8 i = 0;
   for(i=0; i<TOTAL_DEVICE; i++)
   {
-    ZigbeeDevice d = {.id = i + 1,.is_online = false,.ask_time = 0,.last_response_time= 0 };
+    ZigbeeDevice d = {.id = i + 1,.addr = 0xFFFF,.is_online = false,.ask_time = 0,.last_response_time= 0 };
     devices[i] = d;
   }
 
@@ -145,40 +146,49 @@ int main(void)
     {
       uart_idle_data_prepared = false;
       int len = strlen((char *)(MainBuf + oldPos));
-      HAL_UART_Transmit(&huart2,(uint8_t *)(MainBuf + oldPos),len,0xFFFF);
-      Lcd_Init();
+      parse_command((uint8_t *)(MainBuf + oldPos),len);
     }
     if (tim2_count - last_tim2_count_to_refresh > 20)
     {
       Lcd_Init();
-      LCD_Display_Words(1,0,(uint8_t *)"ok");
+      u8 online = get_online_count();
+      char count[] = "online:0 devices";
+      sprintf((char *)count,"online:%d devices",online);
+      LCD_Display_Words(0,0,(u8 *)count);
       last_tim2_count_to_refresh = tim2_count;
     }
     if (is_uart5_idle)
     {
       is_uart5_idle = false;
       int len = strlen((char*)MainBuf_uart5);
-      //rxbuffer_uart5[7] = 0;
-      HAL_UART_Transmit(&huart2,(uint8_t *)(MainBuf_uart5),len,0xFFFF);
-      //LCD_Display_Words(0,0,rxbuffer_uart5);
+      HAL_UART_Transmit(&huart2,(uint8_t *)(MainBuf_uart5),last_size_uart5,0xFFFF);
+      u8 id = parse_data_from_device(MainBuf_uart5,last_size_uart5);
     }
-    if (tim2_count - last_tim2_count_to_send_zigbee > 30)
+    if (tim2_count - last_tim2_count_to_send_zigbee > 15)
     {
       int group_id = currentdevice_index + 1;
       char sent[50];
       RTC_TimeTypeDef sTime = {0};
       HAL_RTC_GetTime(&hrtc,&sTime,RTC_FORMAT_BIN);
-      sprintf((char *)sent,"[start-id:%dz]time:%02d:%02d:%02d[id:%dz-end]",group_id,sTime.Hours,sTime.Minutes,sTime.Seconds,group_id);
-      if(!is_uart5_idle)
+      sprintf((char *)sent,"[id:%dz,time:%02d:%02d:%02d]",group_id,sTime.Hours,sTime.Minutes,sTime.Seconds);
+
+      filter_offline(); //把超时的设备设为离线
+      if (devices[currentdevice_index].is_online && (devices[currentdevice_index].addr < 0xFF00))
       {
-        transparent_send((uint8_t *)sent,strlen(sent));
-        currentdevice_index++;
-        if (currentdevice_index >= TOTAL_DEVICE)
-        {
-          currentdevice_index = 0;
-        }
-        last_tim2_count_to_send_zigbee = tim2_count;
+        send_to_p2p(currentdevice_index,(u8 *)sent,strlen(sent));
       }
+      else
+      {
+        transparent_send((u8 *)sent,strlen(sent));
+      }
+      HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_8);
+      devices[currentdevice_index].ask_time = RTC_ReadTimeCounter(&hrtc);
+      currentdevice_index++;
+      if (currentdevice_index >= TOTAL_DEVICE)
+      {
+        currentdevice_index = 0;
+      }
+      last_tim2_count_to_send_zigbee = tim2_count;
     }
     HAL_Delay(5);
     /* USER CODE END WHILE */

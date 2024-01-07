@@ -1,6 +1,9 @@
 #include "drf1605h.h"
+#include <stdio.h>
+#include "stdlib.h"
+#include "string.h"
+#include "usart.h"
 #include "lcd12864serial.h"
-#define ZIGBEE_UART &huart5
 bool areArrayEqual(uint8_t* arr1, uint8_t* arr2,int N)
 {
   // Linearly compare elements
@@ -24,10 +27,20 @@ bool is_router_network_joined()
     return false;
   }
 }
-//max data packet size: 256
 void transparent_send(uint8_t* something,uint8_t size)
 {
   HAL_StatusTypeDef return_state = HAL_UART_Transmit_IT(ZIGBEE_UART,something,size);
+  if(return_state != HAL_OK)
+  {
+		__HAL_UART_ENABLE_IT(ZIGBEE_UART, UART_IT_ERR);
+  }
+}
+//max data packet size: 256
+void send_to_coordinator_p2p(uint8_t* something,uint8_t size)
+{
+	uint8_t send_to_addr[256] = {0xFD,size,0x00,0x00};
+  memcpy(send_to_addr+4,something,size);
+  HAL_StatusTypeDef return_state = HAL_UART_Transmit_IT(ZIGBEE_UART,send_to_addr,size+4);
   if(return_state != HAL_OK)
   {
 		__HAL_UART_ENABLE_IT(ZIGBEE_UART, UART_IT_ERR);

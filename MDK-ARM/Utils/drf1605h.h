@@ -1,4 +1,5 @@
 #include "usart.h"
+#define ZIGBEE_UART &huart5
 
 bool is_router_network_joined();
 bool set_as_coordinator();

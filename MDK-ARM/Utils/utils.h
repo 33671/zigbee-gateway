@@ -8,6 +8,7 @@ void delay_us(uint16_t us);
 void delay_ms(uint32_t ms);
 void led_signal();
 uint32_t RTC_ReadTimeCounter(RTC_HandleTypeDef *hrtc);
+HAL_StatusTypeDef RTC_WriteTimeCounter(RTC_HandleTypeDef *hrtc, uint32_t TimeCounter);
 #define RxBuf_SIZE   512
 #define RxBuf_SIZE_uart5   255
 #define MainBuf_SIZE 2048
@@ -22,13 +23,5 @@ extern bool uart_idle_data_prepared;
 extern uint16_t newPos;
 extern uint16_t oldPos;
 extern bool is_uart5_idle;
-#ifndef ZIGBEE
-#define ZIGBEE
-typedef struct ZigbeeDevice
-{
-	u8 id;
-	bool is_online;
-	uint32_t ask_time;
-	uint32_t last_response_time;
-} ZigbeeDevice;
-#endif
+extern uint16_t last_size_uart5;
+

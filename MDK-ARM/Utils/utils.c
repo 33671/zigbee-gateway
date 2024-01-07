@@ -7,7 +7,7 @@
 #include "gpio.h"
 #include "usart.h"
 uint8_t rxbuffer_uart5[RxBuf_SIZE_uart5];
-uint32_t rx_posi;
+uint16_t last_size_uart5 = 0;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 uint8_t RxBuf[512];
 bool is_uart5_idle = false;
@@ -18,6 +18,7 @@ uint16_t format_text_start_pos = 0;
 uint8_t MainBuf_uart5[MainBuf_SIZE_uart5];
 uint16_t newPos = 0;
 uint16_t oldPos = 0;
+
 uint8_t MainBuf[MainBuf_SIZE];
 uint8_t RxBuf[RxBuf_SIZE];
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
@@ -31,7 +32,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     }
   }
 }
-
+#define is_start(rxbuffer_uart5) (rxbuffer_uart5[0] == '[' || rxbuffer_uart5[0] == 0xFD)
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
   //__disable_irq();
@@ -68,13 +69,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
      * This is to maintain the circular buffer
      * The old data in the main buffer will be overlapped
      */
-    if (oldPos_uart5+Size > MainBuf_SIZE_uart5 && rxbuffer_uart5[0] != '[')
+    if (oldPos_uart5+Size > MainBuf_SIZE_uart5 && is_start(rxbuffer_uart5) == false)
     {
       oldPos_uart5 = 0;
       memset(MainBuf_uart5,0,MainBuf_SIZE_uart5);
       newPos_uart5 = 0;
     }
-    else if (rxbuffer_uart5[0] == '[')  // If the current position + new data size is greater than the main buffer
+    else if (is_start(rxbuffer_uart5))  // If the current position + new data size is greater than the main buffer
     {
       oldPos_uart5 = 0;  // point to the start of the buffer
       memset(MainBuf_uart5,0,MainBuf_SIZE_uart5);
@@ -86,8 +87,9 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
       memcpy ((uint8_t *)MainBuf_uart5+oldPos_uart5, rxbuffer_uart5, Size);
       newPos_uart5 = Size+oldPos_uart5;
     }
-    if (rxbuffer_uart5[Size - 1] == '\n' || rxbuffer_uart5[Size - 1] == ']')
+    if (rxbuffer_uart5[Size - 1] == '\n' || rxbuffer_uart5[Size - 1] == ']' || rxbuffer_uart5[Size - 3] == ']')
     {
+      last_size_uart5 = Size;
       is_uart5_idle = true;
     }
     else {
@@ -165,6 +167,90 @@ uint32_t RTC_ReadTimeCounter(RTC_HandleTypeDef *hrtc)
   }
 
   return timecounter;
+}
+/**
+  * @brief  Enters the RTC Initialization mode.
+  * @param  hrtc   pointer to a RTC_HandleTypeDef structure that contains
+  *                the configuration information for RTC.
+  * @retval HAL status
+  */
+static HAL_StatusTypeDef RTC_EnterInitMode(RTC_HandleTypeDef *hrtc)
+{
+  uint32_t tickstart = 0U;
+
+  tickstart = HAL_GetTick();
+  /* Wait till RTC is in INIT state and if Time out is reached exit */
+  while ((hrtc->Instance->CRL & RTC_CRL_RTOFF) == (uint32_t)RESET)
+  {
+    if ((HAL_GetTick() - tickstart) >  RTC_TIMEOUT_VALUE)
+    {
+      return HAL_TIMEOUT;
+    }
+  }
+
+  /* Disable the write protection for RTC registers */
+  __HAL_RTC_WRITEPROTECTION_DISABLE(hrtc);
+
+
+  return HAL_OK;
+}
+/**
+  * @brief  Exit the RTC Initialization mode.
+  * @param  hrtc   pointer to a RTC_HandleTypeDef structure that contains
+  *                the configuration information for RTC.
+  * @retval HAL status
+  */
+static HAL_StatusTypeDef RTC_ExitInitMode(RTC_HandleTypeDef *hrtc)
+{
+  uint32_t tickstart = 0U;
+
+  /* Disable the write protection for RTC registers */
+  __HAL_RTC_WRITEPROTECTION_ENABLE(hrtc);
+
+  tickstart = HAL_GetTick();
+  /* Wait till RTC is in INIT state and if Time out is reached exit */
+  while ((hrtc->Instance->CRL & RTC_CRL_RTOFF) == (uint32_t)RESET)
+  {
+    if ((HAL_GetTick() - tickstart) >  RTC_TIMEOUT_VALUE)
+    {
+      return HAL_TIMEOUT;
+    }
+  }
+
+  return HAL_OK;
+}
+
+/**
+  * @brief  Write the time counter in RTC_CNT registers.
+  * @param  hrtc   pointer to a RTC_HandleTypeDef structure that contains
+  *                the configuration information for RTC.
+  * @param  TimeCounter: Counter to write in RTC_CNT registers
+  * @retval HAL status
+  */
+HAL_StatusTypeDef RTC_WriteTimeCounter(RTC_HandleTypeDef *hrtc, uint32_t TimeCounter)
+{
+  HAL_StatusTypeDef status = HAL_OK;
+
+  /* Set Initialization mode */
+  if (RTC_EnterInitMode(hrtc) != HAL_OK)
+  {
+    status = HAL_ERROR;
+  }
+  else
+  {
+    /* Set RTC COUNTER MSB word */
+    WRITE_REG(hrtc->Instance->CNTH, (TimeCounter >> 16U));
+    /* Set RTC COUNTER LSB word */
+    WRITE_REG(hrtc->Instance->CNTL, (TimeCounter & RTC_CNTL_RTC_CNT));
+
+    /* Wait for synchro */
+    if (RTC_ExitInitMode(hrtc) != HAL_OK)
+    {
+      status = HAL_ERROR;
+    }
+  }
+
+  return status;
 }
 /**
  * @brief  This function provides a delay (in microseconds)

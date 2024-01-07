@@ -911,6 +911,11 @@
               <FileType>1</FileType>
               <FilePath>.\Utils\drf1605h.c</FilePath>
             </File>
+            <File>
+              <FileName>sender.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Utils\sender.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
