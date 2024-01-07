@@ -37,20 +37,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
-extern uint8_t rxbuffer_uart5[512];
-extern uint8_t RxBuf[512];
-extern uint8_t MainBuf[MainBuf_SIZE];
-extern uint8_t MainBuf_uart5[MainBuf_SIZE_uart5];
-extern uint16_t oldPos_uart5;
-extern uint16_t newPos_uart5;
-extern bool uart_idle_data_prepared;
-extern uint16_t newPos;
-extern uint16_t oldPos;
 extern u32 tim2_count;
-extern bool is_uart5_idle;
 extern DMA_HandleTypeDef hdma_usart2_rx;
-bool should_read_buffer = false;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -116,7 +104,7 @@ int main(void)
   MX_UART5_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  
+
   u8 i = 0;
   for(i=0; i<TOTAL_DEVICE; i++)
   {
@@ -147,7 +135,7 @@ int main(void)
     LCD_Display_Words(0,0,(uint8_t*)"sad");
     Error_Handler();
   }
-  HAL_UARTEx_ReceiveToIdle_IT(&huart5,rxbuffer_uart5,255);
+  HAL_UARTEx_ReceiveToIdle_IT(&huart5,rxbuffer_uart5,RxBuf_SIZE_uart5);
   uint8_t current_time[10];
   u32 last_tim2_count_to_refresh = tim2_count;
   u32 last_tim2_count_to_send_zigbee = tim2_count;
@@ -157,7 +145,7 @@ int main(void)
     {
       uart_idle_data_prepared = false;
       int len = strlen((char *)(MainBuf + oldPos));
-      HAL_UART_Transmit_IT(&huart2,(uint8_t *)(MainBuf + oldPos),len);
+      HAL_UART_Transmit(&huart2,(uint8_t *)(MainBuf + oldPos),len,0xFFFF);
       Lcd_Init();
     }
     if (tim2_count - last_tim2_count_to_refresh > 20)
@@ -177,22 +165,22 @@ int main(void)
     if (tim2_count - last_tim2_count_to_send_zigbee > 30)
     {
       int group_id = currentdevice_index + 1;
-			char sent[50];
-			RTC_TimeTypeDef sTime = {0};
-			HAL_RTC_GetTime(&hrtc,&sTime,RTC_FORMAT_BIN);
-			sprintf((char *)sent,"[start-id:%dz]time:%02d:%02d:%02d[id:%dz-end]",group_id,sTime.Hours,sTime.Minutes,sTime.Seconds,group_id);
-			transparent_send((uint8_t *)sent,strlen(sent));
-			currentdevice_index++;
-			if (currentdevice_index >= TOTAL_DEVICE)
-			{
-				currentdevice_index = 0;
-				continue;
-			}
-			last_tim2_count_to_send_zigbee = tim2_count;
+      char sent[50];
+      RTC_TimeTypeDef sTime = {0};
+      HAL_RTC_GetTime(&hrtc,&sTime,RTC_FORMAT_BIN);
+      sprintf((char *)sent,"[start-id:%dz]time:%02d:%02d:%02d[id:%dz-end]",group_id,sTime.Hours,sTime.Minutes,sTime.Seconds,group_id);
+      if(!is_uart5_idle)
+      {
+        transparent_send((uint8_t *)sent,strlen(sent));
+        currentdevice_index++;
+        if (currentdevice_index >= TOTAL_DEVICE)
+        {
+          currentdevice_index = 0;
+        }
+        last_tim2_count_to_send_zigbee = tim2_count;
+      }
     }
-    HAL_Delay(50);
-
-
+    HAL_Delay(5);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -228,7 +216,7 @@ void SystemClock_Config(void)
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;

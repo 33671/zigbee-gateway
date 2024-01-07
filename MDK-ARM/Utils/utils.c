@@ -20,10 +20,21 @@ uint16_t newPos = 0;
 uint16_t oldPos = 0;
 uint8_t MainBuf[MainBuf_SIZE];
 uint8_t RxBuf[RxBuf_SIZE];
-
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == UART5)
+  {
+    if(__HAL_UART_GET_FLAG(huart,UART_FLAG_ORE) != RESET)
+    {
+      __HAL_UART_CLEAR_OREFLAG(huart);
+      HAL_UARTEx_ReceiveToIdle_IT(&huart5, (uint8_t *)&rxbuffer_uart5,RxBuf_SIZE_uart5);
+    }
+  }
+}
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
+  //__disable_irq();
   if (huart->Instance == USART2)
   {
     uart_idle_data_prepared = false;
@@ -50,23 +61,23 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
   }
   else if (huart->Instance == UART5)
   {
-    HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_8);
+    HAL_StatusTypeDef return_state = HAL_UARTEx_ReceiveToIdle_IT(&huart5,rxbuffer_uart5,RxBuf_SIZE_uart5);
     is_uart5_idle = false;
     oldPos_uart5 = newPos_uart5;  // Update the last position before copying new data
     /* If the data in large and it is about to exceed the buffer size, we have to route it to the start of the buffer
      * This is to maintain the circular buffer
      * The old data in the main buffer will be overlapped
      */
-		if (oldPos_uart5+Size > MainBuf_SIZE_uart5 && rxbuffer_uart5[0] != '[')
-		{
-			oldPos_uart5 = 0;
-			memset(MainBuf_uart5,0,MainBuf_SIZE_uart5);
-			newPos_uart5 = 0;
-		}
+    if (oldPos_uart5+Size > MainBuf_SIZE_uart5 && rxbuffer_uart5[0] != '[')
+    {
+      oldPos_uart5 = 0;
+      memset(MainBuf_uart5,0,MainBuf_SIZE_uart5);
+      newPos_uart5 = 0;
+    }
     else if (rxbuffer_uart5[0] == '[')  // If the current position + new data size is greater than the main buffer
     {
       oldPos_uart5 = 0;  // point to the start of the buffer
-			memset(MainBuf_uart5,0,MainBuf_SIZE_uart5);
+      memset(MainBuf_uart5,0,MainBuf_SIZE_uart5);
       memcpy ((uint8_t *)MainBuf_uart5, (uint8_t *)rxbuffer_uart5, Size);  // copy the data to start
       newPos_uart5 = Size;  // update the position
     }
@@ -82,9 +93,32 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     else {
       is_uart5_idle = false;
     }
-    HAL_UARTEx_ReceiveToIdle_IT(&huart5,rxbuffer_uart5,255);
+    //__enable_irq();
+    if(return_state != HAL_OK)
+    {
+      HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_8);
+      do
+      {
+        //清除ORE错误
+//        __HAL_UART_CLEAR_FEFLAG(&huart5);
+//        __HAL_UART_CLEAR_PEFLAG(&huart5);
+//        __HAL_UART_CLEAR_IDLEFLAG(&huart5);
+        __HAL_UART_CLEAR_OREFLAG(&huart5);//清楚ORE标志位
+        huart5.RxState= HAL_UART_STATE_READY;
+        huart5.Lock = HAL_UNLOCKED;
+//        //解除忙状态（由ORE导致，清零ORE位）
+//        if(return_state == HAL_BUSY)
+//        {
+//
+//        }
+      }
+      while(HAL_UARTEx_ReceiveToIdle_IT(&huart5, (uint8_t *)&rxbuffer_uart5,RxBuf_SIZE_uart5)!=HAL_OK);//重新开始接收
+    }
   }
+  //__enable_irq();
 }
+
+
 void led_signal()
 {
   HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_8);

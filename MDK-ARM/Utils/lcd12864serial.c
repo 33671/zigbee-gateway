@@ -103,11 +103,11 @@ void Lcd_WriteCmd(u8 Cmd )
 	digitalWrite(LCS,LOW);
   digitalWrite(LAO,LOW);
   delay_ms(1);     //由于我们没有写LCD正忙的检测，所以直接延时1ms，使每次写入数据或指令间隔大于1ms 便可不用写忙状态检测
-	__disable_irq();
+	//__disable_irq();
   SendByte(WRITE_CMD);            //11111,RW(0),RS(0),0
   SendByte(0xf0&Cmd);      //高四位
   SendByte(Cmd<<4);   //低四位(先执行<<)
-	__enable_irq();
+	//__enable_irq();
 	//digitalWrite(LCS,HIGH);
 }
 
@@ -122,11 +122,11 @@ void Lcd_WriteData(u8 Dat )
 	digitalWrite(LCS,LOW);
   digitalWrite(LAO,HIGH);
   delay_ms(1);
-	__disable_irq();
+	//__disable_irq();
   SendByte(WRITE_DAT);            //11111,RW(0),RS(1),0
   SendByte(0xf0&Dat);      //高四位
   SendByte(Dat<<4);   //低四位(先执行<<)
-	__enable_irq();
+	//__enable_irq();
 	//digitalWrite(LCS,HIGH);
 }
 ///*!

@@ -29,7 +29,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
-extern bool should_read_buffer;
 u32 tim2_count = 0;
 u32 uart5_receive_count = 0;
 
@@ -229,13 +228,7 @@ void DMA1_Channel6_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-	should_read_buffer = true;
 	tim2_count++;
-	if (tim2_count >= 0xFFFFFFFF)
-	{
-		tim2_count = 0;
-	}
-	
 	//return;
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);

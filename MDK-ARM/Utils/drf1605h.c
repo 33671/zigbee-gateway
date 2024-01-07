@@ -12,7 +12,7 @@ bool areArrayEqual(uint8_t* arr1, uint8_t* arr2,int N)
 }
 bool is_router_network_joined()
 {
-	uint8_t rx_buffer[8];
+  uint8_t rx_buffer[8];
   uint8_t no_network_joined[2] =  {0xFF, 0xFE};
   uint8_t read_panid[] = {0xFC,0x00,0x91,0x03,0xA3,0xB3,0xE6};
   HAL_UART_Transmit(ZIGBEE_UART,read_panid,7,0xFFFF);
@@ -27,13 +27,24 @@ bool is_router_network_joined()
 //max data packet size: 256
 void transparent_send(uint8_t* something,uint8_t size)
 {
-  HAL_UART_Transmit(ZIGBEE_UART,something,size,0xFFFF);
+  HAL_StatusTypeDef return_state = HAL_UART_Transmit_IT(ZIGBEE_UART,something,size);
+  if(return_state != HAL_OK)
+  {
+		__HAL_UART_ENABLE_IT(ZIGBEE_UART, UART_IT_ERR);
+//    __HAL_UART_CLEAR_FEFLAG(&huart5);
+//    __HAL_UART_CLEAR_PEFLAG(&huart5);
+//    __HAL_UART_CLEAR_IDLEFLAG(&huart5);
+//    __HAL_UART_CLEAR_OREFLAG(ZIGBEE_UART);//清楚ORE标志位
+//    huart5.RxState= HAL_UART_STATE_READY;
+//    huart5.Lock = HAL_UNLOCKED;
+    //HAL_UART_Transmit_IT(ZIGBEE_UART,something,size);//重新开始接收
+  }
 }
 bool transparent_receive(uint8_t* something,uint8_t size,uint32_t timeout)
 {
   HAL_StatusTypeDef is_ok = HAL_UART_Receive(ZIGBEE_UART,something,size,2000);
-	//LCD_Fill(10,10,128,22,BLUE);
-	return (is_ok == HAL_OK);
+  //LCD_Fill(10,10,128,22,BLUE);
+  return (is_ok == HAL_OK);
 }
 bool read_short_addr(uint8_t* addr,bool* network_joined)
 {
