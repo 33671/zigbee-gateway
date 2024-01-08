@@ -163,6 +163,7 @@ int main(void)
       int len = strlen((char*)MainBuf_uart5);
       HAL_UART_Transmit(&huart2,(uint8_t *)(MainBuf_uart5),last_size_uart5,0xFFFF);
       u8 id = parse_data_from_device(MainBuf_uart5,last_size_uart5);
+			filter_offline();
     }
     if (tim2_count - last_tim2_count_to_send_zigbee > 15)
     {
@@ -226,7 +227,7 @@ void SystemClock_Config(void)
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;

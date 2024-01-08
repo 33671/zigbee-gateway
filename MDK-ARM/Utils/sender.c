@@ -5,11 +5,11 @@
 #include "drf1605h.h"
 #include "usart.h"
 ZigbeeDevice devices[TOTAL_DEVICE];
+//列出所有设备
 void return_devices()
 {
-
   u8 i = 0;
-  char part[] = "id:1z,addr:0000,online:true,last_res:00000000\n";
+  char part[] = "id:1z,addr:0000,online:0,last_res:00000000\n";
   u8 len = strlen(part);
   char devices_description[len * 9];
 
@@ -19,7 +19,7 @@ void return_devices()
     u8 id = devices[i].id;
     u32 last_res = devices[i].last_response_time;
     u16 addr = devices[i].addr;
-    sprintf((char *)part,"id:%dz,addr:%02x%02x,online:%d,last_res:%x\n",id,(u8)(addr>>8),(u8)(addr),is_online,last_res);
+    sprintf((char *)part,"id:%dz,addr:%02x%02x,online:%d,last_res:%00000008x\n",id,(u8)(addr>>8),(u8)(addr),is_online,last_res);
     //memcpy((devices_description+len*i),part,len);
     HAL_UART_Transmit(&huart2,(u8 *)part,strlen(part),0xFFFF);
   }
@@ -27,31 +27,33 @@ void return_devices()
 }
 void parse_command(uint8_t * data,u8 len)
 {
-  char* posi = strstr((char *)data,"devices");
-  if (posi)
+  //读设备列表
+  if (strstr((char *)data,"devices"))
   {
     return_devices();
   }
-  else if(strstr((char *)data,"send"))
+  else if(strstr((char *)data,"send")) //使用p2p发送给特定id的设备
   {
     int id = 0xFF;
     char* dataposi = strstr((char *)data,"data") + 5;
     sscanf((const char*)(data+5), "id:%dz,data:%*", &id);
     send_to_p2p(id - 1,(u8 *)(dataposi),strlen(dataposi));
   }
-  else if(strstr((char *)data,"set-time"))
+  else if(strstr((char *)data,"set-time"))//校准时间
   {
     u32 time = 0;
     char* dataposi = strstr((char *)data,"time") + 4;
     if(sscanf((const char*)(dataposi), " %d", &time))
     {
-      RTC_WriteTimeCounter(&hrtc,time);
+			//HAL_UART_Transmit(&huart2,&time,4,0xFFFF);
+      RTC_WriteTimeCounter(&hrtc,time + 3600 * 8); //utc+8
     }
   }
-  else {
-    transparent_send((u8 *)data,len);
+  else if (strstr((char *)data,"broadcast")){ //广播收到的消息
+    transparent_send((u8 *)data+10,(len - 10));
   }
 }
+//获得在线设备数
 u8 get_online_count()
 {
   filter_offline();
@@ -65,13 +67,17 @@ u8 get_online_count()
   }
   return count;
 }
-
-void filter_offline() //把超时的设备设为离线
+//把超时的设备设为离线
+void filter_offline() 
 {
   u8 i = 0;
   u32 now = RTC_ReadTimeCounter(&hrtc);
   for (i = 0; i<TOTAL_DEVICE; i++)
   {
+		if (now < devices[i].last_response_time)
+		{
+			devices[i].last_response_time = 0;
+		}
     if (devices[i].last_response_time == 0)
     {
       devices[i].is_online = false;
@@ -85,6 +91,7 @@ void filter_offline() //把超时的设备设为离线
     }
   }
 }
+//解析处理来自其他设备的数据，p2p或者透传
 u8 parse_data_from_device(uint8_t * data,u16 len)
 {
   int id = 0xFF;
@@ -115,6 +122,7 @@ u8 parse_data_from_device(uint8_t * data,u16 len)
   }
   return id;
 }
+//p2p发送数据到特定id的设备
 bool send_to_p2p(u8 id,uint8_t* data,u8 len)
 {
   if (id > 10) return false;
